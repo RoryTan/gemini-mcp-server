@@ -20,7 +20,7 @@ const AudioTranscriptionTool = require('./audio-transcription');
 const CodeExecutionTool = require('./code-execution');
 const VideoAnalysisTool = require('./video-analysis');
 const ImageAnalysisTool = require('./image-analysis');
-const FileUploadTool = require('./file-upload');
+// FileUploadTool removed — security risk (reads any file up to 2GB, uploads to Google)
 
 /**
  * @type {Map<string, import('./base-tool')>}
@@ -84,7 +84,7 @@ registerTool(new AudioTranscriptionTool(intelligenceSystem, geminiService));
 registerTool(new CodeExecutionTool(intelligenceSystem, geminiService));
 registerTool(new VideoAnalysisTool(intelligenceSystem, geminiService));
 registerTool(new ImageAnalysisTool(intelligenceSystem, geminiService));
-registerTool(new FileUploadTool(intelligenceSystem, geminiService));
+// FileUploadTool removed — security risk
 
 module.exports = {
   registerTool,

@@ -14,17 +14,7 @@ const config = {
    * Fetched from process.env.GEMINI_API_KEY or uses fallback keys.
    * @type {string}
    */
-  API_KEY: process.env.GEMINI_API_KEY || 'AIzaSyD0AGPlaa8aV8NCFu5xVPMRLdGaamRDIvc',
-
-  /**
-   * Gemini API Key fallbacks for improved reliability.
-   * @type {string[]}
-   */
-  GEMINI_API_KEY_FALLBACKS: [
-    'AIzaSyD0AGPlaa8aV8NCFu5xVPMRLdGaamRDIvc',
-    'AIzaSyC8BW5mHihe4jV-hczXrvgNcPo_dMdtEas',
-    'AIzaSyD6Ki3ZtL19-Km9y8EQcywZvHJLDiRDyNk'
-  ],
+  API_KEY: process.env.GEMINI_API_KEY || (() => { throw new Error('GEMINI_API_KEY environment variable is required'); })(),
 
   /**
    * OpenRouter API Key for backup/alternative provider.
@@ -51,7 +41,7 @@ const config = {
    * Fetched from process.env.OUTPUT_DIR or defaults to a subdirectory in user's Claude folder.
    * @type {string}
    */
-  OUTPUT_DIR: process.env.OUTPUT_DIR || path.join(os.homedir(), 'Claude', 'gemini-images'),
+  OUTPUT_DIR: process.env.OUTPUT_DIR || path.join(os.homedir(), 'Pictures', 'gemini-output'),
 
   /**
    * Debug mode flag.
