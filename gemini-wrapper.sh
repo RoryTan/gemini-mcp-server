@@ -9,6 +9,12 @@ if [ -z "$GEMINI_API_KEY" ]; then
     exit 1
 fi
 
+# OpenRouter API key from Keychain (OPTIONAL — enables nano-banana-pro)
+OPENROUTER_KEY=$(security find-generic-password -s "openrouter-api" -a "api_key" -w 2>/dev/null)
+if [ -n "$OPENROUTER_KEY" ]; then
+    export OPENROUTER_API_KEY="$OPENROUTER_KEY"
+fi
+
 export OUTPUT_DIR=${OUTPUT_DIR:-"$HOME/Pictures/gemini-output"}
 export DEBUG=${DEBUG:-"false"}
 
