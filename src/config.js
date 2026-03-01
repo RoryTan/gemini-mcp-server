@@ -137,34 +137,34 @@ const config = {
    */
   GEMINI_MODELS: {
     IMAGE_GENERATION: {
-      model: 'gemini-2.0-flash-exp',
+      model: 'gemini-2.5-flash-image',
       generationConfig: {
         responseModalities: ['TEXT', 'IMAGE'],
       },
     },
     IMAGE_EDITING: {
-      model: 'gemini-2.0-flash-exp',
+      model: 'gemini-2.5-flash-image',
       generationConfig: {
         responseModalities: ['TEXT', 'IMAGE'],
         temperature: 0.3, // Lower temperature for consistent edits
       },
     },
     CHAT: {
-      model: 'gemini-2.0-flash',
+      model: 'gemini-2.5-flash',
       generationConfig: {
         temperature: 0.7, // Higher temperature for more conversational responses
         maxOutputTokens: 2048,
       },
     },
     AUDIO_TRANSCRIPTION: {
-      model: 'gemini-1.5-flash',
+      model: 'gemini-2.5-flash',
       generationConfig: {
         temperature: 0.1, // Low temperature for accurate transcription
         maxOutputTokens: 2048,
       },
     },
     CODE_EXECUTION: {
-      model: 'gemini-2.0-flash',
+      model: 'gemini-2.5-flash',
       generationConfig: {
         temperature: 0.1, // Low temperature for accurate code execution
         maxOutputTokens: 2048,
@@ -174,21 +174,21 @@ const config = {
       }],
     },
     VIDEO_ANALYSIS: {
-      model: 'gemini-2.0-flash',
+      model: 'gemini-2.5-flash',
       generationConfig: {
         temperature: 0.2, // Low temperature for accurate analysis
         maxOutputTokens: 2048,
       },
     },
     IMAGE_ANALYSIS: {
-      model: 'gemini-2.0-flash',
+      model: 'gemini-2.5-flash',
       generationConfig: {
         temperature: 0.2, // Low temperature for accurate analysis
         maxOutputTokens: 2048,
       },
     },
     ADVANCED_IMAGE_GENERATION: {
-      model: 'gemini-2.0-flash-exp',
+      model: 'gemini-2.5-flash-image',
       generationConfig: {
         responseModalities: ['TEXT', 'IMAGE'],
         temperature: 0.4, // Balanced for creative consistency

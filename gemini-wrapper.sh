@@ -15,4 +15,4 @@ export DEBUG=${DEBUG:-"false"}
 mkdir -p "$OUTPUT_DIR"
 
 cd "$(dirname "$0")"
-exec node gemini-server.js 2>/dev/null
+exec node gemini-server.js

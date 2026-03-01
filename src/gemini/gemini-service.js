@@ -76,6 +76,45 @@ class GeminiService {
   }
 
   /**
+   * Generates an advanced image using reference images and a prompt.
+   * Supports multi-image fusion, character consistency, targeted editing, etc.
+   * @param {string} modelType - The model config key (e.g., 'ADVANCED_IMAGE_GENERATION').
+   * @param {string} prompt - The text prompt for generation.
+   * @param {Array<{data: string, mimeType: string}>} referenceImages - Base64 encoded reference images.
+   * @param {Object} [options] - Additional options (e.g., { mode }).
+   * @returns {Promise<string>} The generated image data (base64 encoded).
+   */
+  async generateAdvancedImage(modelType, prompt, referenceImages = [], options = {}) {
+    try {
+      const modelConfig = getGeminiModelConfig(modelType);
+      const model = this.genAI.getGenerativeModel({ model: modelConfig.model });
+
+      // Build parts: text prompt first, then all reference images
+      const parts = [{ text: prompt }];
+      for (const img of referenceImages) {
+        parts.push({
+          inlineData: {
+            data: img.data,
+            mimeType: img.mimeType,
+          },
+        });
+      }
+
+      const request = {
+        contents: [{ parts }],
+        generationConfig: modelConfig.generationConfig,
+      };
+
+      const result = await model.generateContent(request);
+      log(`Advanced image generation response received for model type: ${modelType} (mode: ${options.mode || 'standard'}, refs: ${referenceImages.length})`, 'gemini-service');
+      return extractImageData(result.response?.candidates?.[0]);
+    } catch (error) {
+      log(`Error generating advanced image with Gemini API for model type ${modelType}: ${error.message}`, 'gemini-service');
+      throw new Error(`Gemini advanced image generation failed: ${error.message}`);
+    }
+  }
+
+  /**
    * Analyzes an image using a specified Gemini model.
    * @param {string} modelType - The type of Gemini model to use (e.g., 'IMAGE_ANALYSIS').
    * @param {string} prompt - The text prompt for the analysis.
