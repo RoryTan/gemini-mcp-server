@@ -137,13 +137,13 @@ const config = {
    */
   GEMINI_MODELS: {
     IMAGE_GENERATION: {
-      model: 'gemini-2.5-flash-image',
+      model: 'gemini-3.1-flash-image-preview', // Nano Banana 2
       generationConfig: {
         responseModalities: ['TEXT', 'IMAGE'],
       },
     },
     IMAGE_EDITING: {
-      model: 'gemini-2.5-flash-image',
+      model: 'gemini-3.1-flash-image-preview', // Nano Banana 2
       generationConfig: {
         responseModalities: ['TEXT', 'IMAGE'],
         temperature: 0.3, // Lower temperature for consistent edits
@@ -188,7 +188,7 @@ const config = {
       },
     },
     ADVANCED_IMAGE_GENERATION: {
-      model: 'gemini-2.5-flash-image',
+      model: 'gemini-3.1-flash-image-preview', // Nano Banana 2
       generationConfig: {
         responseModalities: ['TEXT', 'IMAGE'],
         temperature: 0.4, // Balanced for creative consistency
@@ -201,9 +201,9 @@ const config = {
    * OpenRouter model configurations.
    */
   OPENROUTER_MODELS: {
-    // Nano Banana - Gemini 2.5 Flash Image (GA)
+    // Nano Banana 2 - Gemini 3.1 Flash Image (via OpenRouter)
     ADVANCED_IMAGE_GENERATION: {
-      model: 'google/gemini-2.5-flash-image',
+      model: 'google/gemini-3.1-flash-image-preview',
       generationConfig: {
         temperature: 0.4,
         max_tokens: 2048,

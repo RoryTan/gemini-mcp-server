@@ -1,3 +1,5 @@
+**BEFORE ANY WORK:** Read `CLAUDE.md` first.
+
 # Gemini MCP Server (Forked)
 
 Forked from [Garblesnarff/gemini-mcp-server](https://github.com/Garblesnarff/gemini-mcp-server). Cleaned up for personal use.
@@ -20,7 +22,7 @@ Forked from [Garblesnarff/gemini-mcp-server](https://github.com/Garblesnarff/gem
 | `gemini-chat` | Chat with Gemini |
 | `gemini-transcribe` | Audio transcription (MP3/WAV/FLAC/AAC/OGG/WEBM) |
 | `gemini-code-execute` | Run Python in Gemini's sandbox (not local) |
-| `gemini-analyze-video` | Video analysis (summary, transcript, objects, detailed, custom) |
+| `gemini-analyze-video` | Video analysis (summary, transcript, objects, detailed, charts, custom) — supports local files, pre-uploaded URIs, and YouTube URLs natively |
 
 ## Auth
 - `GEMINI_API_KEY` from Keychain: `security find-generic-password -s "gemini-api" -a "api_key" -w`
@@ -31,6 +33,7 @@ Forked from [Garblesnarff/gemini-mcp-server](https://github.com/Garblesnarff/gem
 - **PII detection**: `gemini-analyze-image` on screenshots → identify PII strings
 - **Audio transcription**: `gemini-transcribe` for YouTube audio
 - **Image editing**: `gemini-edit-image` for touch-ups
+- **YouTube chart/data extraction**: `gemini-analyze-video` with `youtube_url` + `analysis_type: "charts"` → returns structured JSON of every chart, table, and data visualization in the video. No download or yt-dlp required — Gemini processes YouTube URLs natively.
 
 ## Output
 Generated images saved to `~/Pictures/gemini-output/` (configurable via `OUTPUT_DIR` env var).

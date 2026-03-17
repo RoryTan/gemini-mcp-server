@@ -29,10 +29,14 @@ class VideoAnalysisTool extends BaseTool {
             type: 'string',
             description: 'MIME type when using file_uri (e.g., "video/mp4")',
           },
+          youtube_url: {
+            type: 'string',
+            description: 'YouTube video URL to analyze directly (e.g., https://www.youtube.com/watch?v=...) — no download required',
+          },
           analysis_type: {
             type: 'string',
-            description: 'Type of analysis to perform: "summary", "transcript", "objects", "detailed", or "custom"',
-            enum: ['summary', 'transcript', 'objects', 'detailed', 'custom'],
+            description: 'Type of analysis to perform: "summary", "transcript", "objects", "detailed", "charts", or "custom"',
+            enum: ['summary', 'transcript', 'objects', 'detailed', 'charts', 'custom'],
           },
           context: {
             type: 'string',
@@ -48,19 +52,20 @@ class VideoAnalysisTool extends BaseTool {
 
   async execute(args) {
     const startTime = Date.now();
-    const analysisType = args.analysis_type ? validateString(args.analysis_type, 'analysis_type', ['summary', 'transcript', 'objects', 'detailed', 'custom']) : 'summary';
+    const analysisType = args.analysis_type ? validateString(args.analysis_type, 'analysis_type', ['summary', 'transcript', 'objects', 'detailed', 'charts', 'custom']) : 'summary';
     const context = args.context ? validateString(args.context, 'context') : null;
 
-    // Support both file path and file URI
+    // Support YouTube URL, file path, or file URI
+    const youtubeUrl = args.youtube_url;
     const fileUri = args.file_uri;
     const filePath = args.file_path;
-    
-    if (!fileUri && !filePath) {
-      throw new Error('Either file_path or file_uri must be provided');
+
+    const sourceCount = [youtubeUrl, fileUri, filePath].filter(Boolean).length;
+    if (sourceCount === 0) {
+      throw new Error('One of youtube_url, file_path, or file_uri must be provided');
     }
-    
-    if (fileUri && filePath) {
-      throw new Error('Please provide either file_path or file_uri, not both');
+    if (sourceCount > 1) {
+      throw new Error('Please provide only one of youtube_url, file_path, or file_uri');
     }
 
     log(`Analyzing video ${fileUri ? 'from URI' : 'file'}: "${fileUri || filePath}" with analysis type: "${analysisType}" and context: ${context || 'general'}`, this.name);
@@ -86,6 +91,20 @@ class VideoAnalysisTool extends BaseTool {
         case 'detailed':
           baseAnalysisPrompt = 'Please provide a detailed analysis of this video including: summary of content, visual elements, audio/speech transcription, scene changes, key moments, and any notable details.';
           break;
+        case 'charts':
+          baseAnalysisPrompt = `Scan this video frame by frame and extract every chart, graph, table, and data visualization you find.
+
+For EACH one found, output a JSON object with these fields:
+- timestamp: approximate time in the video (e.g. "2:34")
+- type: chart type (e.g. "bar chart", "line graph", "pie chart", "data table", "scatter plot")
+- title: chart/table title if visible
+- axes: { x: "label", y: "label" } where applicable
+- series: list of data series names/colors if applicable
+- data: extracted data points, rows, or values as precisely as possible
+- notes: any annotations, callouts, or key takeaways visible on the chart
+
+Return all findings as a JSON array. If no charts or tables are found in the video, return an empty array [].`;
+          break;
         case 'custom':
           baseAnalysisPrompt = context || 'Please analyze this video and describe what you observe.';
           break;
@@ -108,7 +127,27 @@ class VideoAnalysisTool extends BaseTool {
         analysisPrompt += ` Additional context: ${context}`;
       }
       
-      if (fileUri) {
+      if (youtubeUrl) {
+        // YouTube URL — Gemini native support, no download needed
+        fileName = youtubeUrl;
+        mimeType = 'video/youtube';
+
+        log(`Analyzing YouTube video: ${youtubeUrl}`, this.name);
+
+        try {
+          log('Starting YouTube video analysis (may take 30-90 seconds for longer videos)...', this.name);
+          analysisText = await this.geminiService.analyzeVideoFromYouTube('VIDEO_ANALYSIS', analysisPrompt, youtubeUrl);
+          const duration = ((Date.now() - startTime) / 1000).toFixed(1);
+          log(`YouTube video analysis completed in ${duration} seconds`, this.name);
+        } catch (error) {
+          log(`YouTube video analysis failed: ${error.message}`, this.name);
+          if (error.message.includes('timeout')) {
+            throw new Error('YouTube video analysis timed out. Try a shorter video or use analysis_type "summary" instead of "charts".');
+          }
+          throw error;
+        }
+
+      } else if (fileUri) {
         // Using pre-uploaded file URI
         mimeType = validateNonEmptyString(args.mime_type, 'mime_type');
         fileName = fileUri.split('/').pop();
@@ -178,9 +217,11 @@ class VideoAnalysisTool extends BaseTool {
           }
         }
 
-        let finalResponse = `✓ Video file analyzed successfully:\n\n**File:** ${fileName}\n`;
-        
-        if (fileUri) {
+        let finalResponse = `✓ Video analyzed successfully:\n\n**Source:** ${fileName}\n`;
+
+        if (youtubeUrl) {
+          finalResponse += `**Method:** YouTube (native Gemini)\n`;
+        } else if (fileUri) {
           finalResponse += `**Method:** File URI (pre-uploaded)\n**URI:** ${fileUri}\n`;
         } else {
           finalResponse += `**Method:** Direct upload\n**Size:** ${videoSizeMB.toFixed(2)}MB\n`;

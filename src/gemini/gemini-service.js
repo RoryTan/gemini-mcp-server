@@ -258,6 +258,37 @@ class GeminiService {
   }
 
   /**
+   * Analyzes a YouTube video using its URL (Gemini native YouTube support)
+   * @param {string} modelType - The type of Gemini model to use.
+   * @param {string} prompt - The text prompt for the analysis.
+   * @param {string} youtubeUrl - Full YouTube URL (e.g., https://www.youtube.com/watch?v=...)
+   * @returns {Promise<string>} The analysis result text.
+   */
+  async analyzeVideoFromYouTube(modelType, prompt, youtubeUrl) {
+    try {
+      const modelConfig = getGeminiModelConfig(modelType);
+      const model = this.genAI.getGenerativeModel({ model: modelConfig.model });
+      const content = [{
+        parts: [
+          { text: prompt },
+          {
+            fileData: {
+              fileUri: youtubeUrl,
+            },
+          },
+        ],
+      }];
+
+      const result = await model.generateContent({ contents: content });
+      log(`Video analysis (YouTube URL) response received from Gemini API for model type: ${modelType}`, 'gemini-service');
+      return extractTextContent(result.response?.candidates?.[0]);
+    } catch (error) {
+      log(`Error analyzing YouTube video with Gemini API for model type ${modelType}: ${error.message}`, 'gemini-service');
+      throw new Error(`Gemini YouTube video analysis failed: ${error.message}`);
+    }
+  }
+
+  /**
    * Analyzes image using file URI (for files uploaded to Gemini File API)
    * @param {string} modelType - The type of Gemini model to use.
    * @param {string} prompt - The text prompt for the analysis.
