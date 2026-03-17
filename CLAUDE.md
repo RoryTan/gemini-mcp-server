@@ -37,3 +37,7 @@ Forked from [Garblesnarff/gemini-mcp-server](https://github.com/Garblesnarff/gem
 
 ## Output
 Generated images saved to `~/Pictures/gemini-output/` (configurable via `OUTPUT_DIR` env var).
+
+## Security Notes (for forks)
+- **Unrestricted file read (accepted risk for personal use):** All tools that accept `file_path` or `reference_images` will read any file on the filesystem and send it to Google's Gemini API. This is intentional for a single-user personal tool — you need to reference files anywhere on your machine. **If you fork this for multi-user or networked deployment, add path allowlisting in `src/utils/file-utils.js:readFileAsBuffer()` to prevent arbitrary file exfiltration.**
+- **OpenRouter key in debug logs:** If `DEBUG_ADVANCED_IMAGE=true`, the `Authorization` header (containing the OpenRouter API key) is logged to stderr. Redact before logging if you enable debug mode in a shared environment.

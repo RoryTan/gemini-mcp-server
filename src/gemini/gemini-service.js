@@ -279,7 +279,12 @@ class GeminiService {
         ],
       }];
 
-      const result = await model.generateContent({ contents: content });
+      const request = { contents: content };
+      if (modelConfig.generationConfig) {
+        request.generationConfig = modelConfig.generationConfig;
+      }
+
+      const result = await model.generateContent(request);
       log(`Video analysis (YouTube URL) response received from Gemini API for model type: ${modelType}`, 'gemini-service');
       return extractTextContent(result.response?.candidates?.[0]);
     } catch (error) {

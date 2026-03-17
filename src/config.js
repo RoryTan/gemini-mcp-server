@@ -44,6 +44,27 @@ const config = {
   OUTPUT_DIR: process.env.OUTPUT_DIR || path.join(os.homedir(), 'Pictures', 'gemini-output'),
 
   /**
+   * File access mode.
+   * When true (default), tools can read any file path on the filesystem — suitable for
+   * single-user personal use where the operator controls all inputs.
+   * When false, file reads are restricted to ALLOWED_DIRS. Set to false if forking
+   * for multi-user or networked deployment to prevent arbitrary file exfiltration
+   * to the Gemini API.
+   * @type {boolean}
+   */
+  ALLOW_UNRESTRICTED_FILE_ACCESS: process.env.ALLOW_UNRESTRICTED_FILE_ACCESS !== 'false',
+
+  /**
+   * Allowed directories for file reads when ALLOW_UNRESTRICTED_FILE_ACCESS is false.
+   * Colon-separated list of absolute paths, e.g. "/home/user/uploads:/home/user/pictures".
+   * Ignored when ALLOW_UNRESTRICTED_FILE_ACCESS is true.
+   * @type {string[]}
+   */
+  ALLOWED_DIRS: process.env.ALLOWED_DIRS
+    ? process.env.ALLOWED_DIRS.split(':').map(d => d.trim())
+    : [os.homedir()],
+
+  /**
    * Debug mode flag.
    * Fetched from process.env.DEBUG or defaults to false.
    * @type {boolean}

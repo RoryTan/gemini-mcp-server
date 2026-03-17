@@ -19,7 +19,7 @@ let geminiClient = null;
 function getGeminiClient() {
   if (!geminiClient) {
     geminiClient = new GoogleGenerativeAI(config.API_KEY);
-    log(`Initialized Gemini API with key: ${config.API_KEY.substring(0, 8)}...`, 'gemini-client');
+    log('Initialized Gemini API client', 'gemini-client');
   }
   return geminiClient;
 }

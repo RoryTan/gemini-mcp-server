@@ -142,25 +142,26 @@ async function startServer() {
 
   rl.on('line', async (line) => {
     if (line.trim()) {
+      let request;
       try {
-        const request = JSON.parse(line);
-        await processRequest(request);
+        request = JSON.parse(line);
       } catch (error) {
         log(`Error parsing request: ${error.message}`, 'server');
-        try {
-          const request = JSON.parse(line);
-          if (request.id) {
-            sendResponse({
-              jsonrpc: '2.0',
-              id: request.id,
-              error: {
-                code: -32700,
-                message: `Parse error: ${error.message}`,
-              },
-            });
-          }
-        } catch (e) {
-          log(`Couldn't parse request at all: ${e.message}`, 'server');
+        return;
+      }
+      try {
+        await processRequest(request);
+      } catch (error) {
+        log(`Error processing request: ${error.message}`, 'server');
+        if (request.id) {
+          sendResponse({
+            jsonrpc: '2.0',
+            id: request.id,
+            error: {
+              code: -32603,
+              message: `Internal error: ${error.message}`,
+            },
+          });
         }
       }
     }
