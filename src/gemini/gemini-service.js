@@ -215,7 +215,12 @@ class GeminiService {
         ],
       }];
 
-      const result = await model.generateContent({ contents: content });
+      const request = { contents: content };
+      if (modelConfig.generationConfig) {
+        request.generationConfig = modelConfig.generationConfig;
+      }
+
+      const result = await model.generateContent(request);
       log(`Video analysis response received from Gemini API for model type: ${modelType}`, 'gemini-service');
       return extractTextContent(result.response?.candidates?.[0]);
     } catch (error) {
@@ -240,15 +245,20 @@ class GeminiService {
         parts: [
           { text: prompt },
           {
-            file_data: {
-              mime_type: mimeType,
-              file_uri: fileUri
+            fileData: {
+              mimeType,
+              fileUri,
             }
           },
         ],
       }];
 
-      const result = await model.generateContent({ contents: content });
+      const request = { contents: content };
+      if (modelConfig.generationConfig) {
+        request.generationConfig = modelConfig.generationConfig;
+      }
+
+      const result = await model.generateContent(request);
       log(`Video analysis (from URI) response received from Gemini API for model type: ${modelType}`, 'gemini-service');
       return extractTextContent(result.response?.candidates?.[0]);
     } catch (error) {
@@ -309,9 +319,9 @@ class GeminiService {
         parts: [
           { text: prompt },
           {
-            file_data: {
-              mime_type: mimeType,
-              file_uri: fileUri
+            fileData: {
+              mimeType,
+              fileUri,
             }
           },
         ],
@@ -353,9 +363,9 @@ class GeminiService {
         parts.push({ text: prompt });
       }
       parts.push({
-        file_data: {
-          mime_type: mimeType,
-          file_uri: fileUri
+        fileData: {
+          mimeType,
+          fileUri,
         }
       });
       

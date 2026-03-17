@@ -1,6 +1,6 @@
 /**
  * Image Generation Tool for Gemini MCP Server.
- * Generates images using Google's Gemini 2.0 Flash Experimental model.
+ * Generates images using Gemini 3.1 Flash Image (Nano Banana 2).
  *
  * @author Cline
  */
@@ -18,7 +18,7 @@ class ImageGenerationTool extends BaseTool {
   constructor(intelligenceSystem, geminiService) {
     super(
       'generate_image',
-      'Generate an image using Google\'s Gemini 2.0 Flash Experimental model (with learned user preferences)',
+      'Generate an image using Gemini 3.1 Flash Image (Nano Banana 2)',
       {
         type: 'object',
         properties: {

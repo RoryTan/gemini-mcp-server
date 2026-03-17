@@ -68,7 +68,8 @@ class VideoAnalysisTool extends BaseTool {
       throw new Error('Please provide only one of youtube_url, file_path, or file_uri');
     }
 
-    log(`Analyzing video ${fileUri ? 'from URI' : 'file'}: "${fileUri || filePath}" with analysis type: "${analysisType}" and context: ${context || 'general'}`, this.name);
+    const sourceLabel = youtubeUrl ? `YouTube: "${youtubeUrl}"` : fileUri ? `URI: "${fileUri}"` : `file: "${filePath}"`;
+    log(`Analyzing video ${sourceLabel} with analysis type: "${analysisType}" and context: ${context || 'general'}`, this.name);
 
     try {
       let analysisText;

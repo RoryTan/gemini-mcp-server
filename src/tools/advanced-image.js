@@ -1,6 +1,6 @@
 /**
  * Advanced Image Tool for Gemini MCP Server.
- * Uses Gemini 2.5 Flash Image model for multi-image fusion, character consistency, and targeted editing.
+ * Uses Gemini 3.1 Flash Image (Nano Banana 2) for multi-image fusion, character consistency, and targeted editing.
  *
  * @author Claude + Rob
  */
@@ -19,7 +19,7 @@ class AdvancedImageTool extends BaseTool {
   constructor(intelligenceSystem, geminiService) {
     super(
       'gemini-advanced-image',
-      'Generate advanced images with Gemini 2.5 Flash Image: multi-image fusion, character consistency, targeted editing, and template adherence',
+      'Generate advanced images with Gemini 3.1 Flash Image (Nano Banana 2): multi-image fusion, character consistency, targeted editing, and template adherence',
       {
         type: 'object',
         properties: {
