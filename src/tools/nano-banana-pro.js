@@ -224,8 +224,8 @@ class NanoBananaProTool extends BaseTool {
         finalResponse += `**Prompt:** "${prompt}"\n`;
         finalResponse += `**Output:** ${imagePath}`;
 
-        if (referenceImages.length > 0) {
-          finalResponse += `\n**Reference Images:** ${referenceImages.length} image(s)`;
+        if (referenceImagePaths.length > 0) {
+          finalResponse += `\n**Reference Images:** ${referenceImagePaths.length} image(s)`;
         }
 
         // Cost estimation
@@ -235,7 +235,7 @@ class NanoBananaProTool extends BaseTool {
         // Mode-specific details
         switch (mode) {
           case 'fusion':
-            finalResponse += `\n\n**Fusion Details:** Blended ${referenceImages.length} images with advanced reasoning`;
+            finalResponse += `\n\n**Fusion Details:** Blended ${referenceImagePaths.length} images with advanced reasoning`;
             break;
           case 'consistency':
             finalResponse += `\n\n**Consistency Details:** Maintained character/style (supports up to 5 characters)`;
@@ -282,8 +282,10 @@ class NanoBananaProTool extends BaseTool {
    * @returns {Promise<string>} base64 image data
    */
   async _generateDirect(prompt, fileRefs) {
-    const parts = fileRefs.map(({ uri, mimeType }) => ({ fileData: { mimeType, fileUri: uri } }));
-    parts.push({ text: prompt });
+    const parts = [
+      { text: prompt },
+      ...fileRefs.map(({ uri, mimeType }) => ({ fileData: { mimeType, fileUri: uri } })),
+    ];
 
     const body = JSON.stringify({
       contents: [{ parts }],
