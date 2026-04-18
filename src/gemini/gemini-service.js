@@ -11,6 +11,7 @@ const { getGeminiModelConfig } = require('./models');
 const { formatTextPrompt, formatImagePrompt } = require('./request-handler');
 const { extractTextContent, extractImageData } = require('./response-parser');
 const { log } = require('../utils/logger');
+const config = require('../config');
 
 class GeminiService {
   constructor() {
@@ -111,6 +112,73 @@ class GeminiService {
     } catch (error) {
       log(`Error generating advanced image with Gemini API for model type ${modelType}: ${error.message}`, 'gemini-service');
       throw new Error(`Gemini advanced image generation failed: ${error.message}`);
+    }
+  }
+
+  /**
+   * Generates an image using Nano Banana Pro (Gemini 3 Pro Image) via direct Gemini API.
+   * Reference images are supplied as Gemini File API URIs — not base64.
+   * @param {string} prompt - Text prompt (mode-specific content should already be embedded).
+   * @param {Array<{uri: string, mimeType: string}>} fileUris - File API URIs for reference images.
+   * @param {Object} [options] - e.g. { mode, resolution }
+   * @returns {Promise<string>} Base64-encoded image data.
+   */
+  async generateNanaBananaProImageDirect(prompt, fileUris, options = {}) {
+    try {
+      const modelConfig = config.GEMINI_MODELS.NANO_BANANA_PRO;
+      const model = this.genAI.getGenerativeModel({ model: modelConfig.model });
+
+      const parts = [
+        { text: prompt },
+        ...fileUris.map(({ uri, mimeType }) => ({
+          fileData: { fileUri: uri, mimeType },
+        })),
+      ];
+
+      const result = await model.generateContent({
+        contents: [{ parts }],
+        generationConfig: modelConfig.generationConfig,
+      });
+
+      log(`NBP direct generation complete (refs: ${fileUris.length}, mode: ${options.mode || 'standard'})`, 'gemini-service');
+      return extractImageData(result.response?.candidates?.[0]);
+    } catch (error) {
+      log(`NBP direct generation error: ${error.message}`, 'gemini-service');
+      throw new Error(`Gemini NBP direct generation failed: ${error.message}`);
+    }
+  }
+
+  /**
+   * Generates an advanced image via direct Gemini API using File API URIs.
+   * Drop-in complement to generateAdvancedImage() — same signature except fileUris instead of base64 array.
+   * @param {string} modelType - Model config key (e.g., 'ADVANCED_IMAGE_GENERATION').
+   * @param {string} prompt - Text prompt.
+   * @param {Array<{uri: string, mimeType: string}>} fileUris - File API URIs for reference images.
+   * @param {Object} [options] - e.g. { mode }
+   * @returns {Promise<string>} Base64-encoded image data.
+   */
+  async generateAdvancedImageDirect(modelType, prompt, fileUris, options = {}) {
+    try {
+      const modelConfig = getGeminiModelConfig(modelType);
+      const model = this.genAI.getGenerativeModel({ model: modelConfig.model });
+
+      const parts = [
+        { text: prompt },
+        ...fileUris.map(({ uri, mimeType }) => ({
+          fileData: { fileUri: uri, mimeType },
+        })),
+      ];
+
+      const result = await model.generateContent({
+        contents: [{ parts }],
+        generationConfig: modelConfig.generationConfig,
+      });
+
+      log(`Advanced image direct generation complete (refs: ${fileUris.length}, mode: ${options.mode || 'standard'})`, 'gemini-service');
+      return extractImageData(result.response?.candidates?.[0]);
+    } catch (error) {
+      log(`Advanced image direct generation error: ${error.message}`, 'gemini-service');
+      throw new Error(`Gemini advanced image direct generation failed: ${error.message}`);
     }
   }
 
