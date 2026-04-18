@@ -30,11 +30,18 @@ const config = {
   OPENROUTER_BASE_URL: 'https://openrouter.ai/api/v1',
 
   /**
-   * Use OpenRouter for advanced image generation (free tier).
-   * Fetched from process.env.USE_OPENROUTER_FOR_ADVANCED_IMAGE or defaults to true.
+   * Gemini File API upload endpoint.
+   * @type {string}
+   */
+  GEMINI_FILE_API_UPLOAD_URL: 'https://generativelanguage.googleapis.com/upload/v1beta/files',
+
+  /**
+   * Use OpenRouter for advanced image generation (fallback only).
+   * Set USE_OPENROUTER_FOR_ADVANCED_IMAGE=true to force O/R path.
+   * Defaults to false — direct Gemini API is used instead.
    * @type {boolean}
    */
-  USE_OPENROUTER_FOR_ADVANCED_IMAGE: process.env.USE_OPENROUTER_FOR_ADVANCED_IMAGE !== 'false',
+  USE_OPENROUTER_FOR_ADVANCED_IMAGE: process.env.USE_OPENROUTER_FOR_ADVANCED_IMAGE === 'true',
 
   /**
    * Directory for output files (e.g., generated images).
@@ -214,6 +221,14 @@ const config = {
         responseModalities: ['TEXT', 'IMAGE'],
         temperature: 0.4, // Balanced for creative consistency
         maxOutputTokens: 2048,
+      },
+    },
+    NANO_BANANA_PRO: {
+      model: 'gemini-3-pro-image-preview',
+      generationConfig: {
+        responseModalities: ['TEXT', 'IMAGE'],
+        temperature: 0.4,
+        maxOutputTokens: 4096,
       },
     },
   },
