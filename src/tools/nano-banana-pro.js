@@ -7,6 +7,7 @@
  */
 
 const crypto = require('crypto');
+const https = require('https');
 const path = require('path');
 const fs = require('fs');
 const BaseTool = require('./base-tool');
@@ -15,6 +16,7 @@ const { ensureDirectoryExists, readFileAsBuffer, validateFileSize, getMimeType }
 const { validateNonEmptyString, validateString } = require('../utils/validation');
 const config = require('../config');
 const openRouterService = require('../openrouter/openrouter-service');
+const fileApi = require('../gemini/file-api');
 
 class NanoBananaProTool extends BaseTool {
   constructor(intelligenceSystem, geminiService) {
@@ -89,46 +91,52 @@ class NanoBananaProTool extends BaseTool {
         throw new Error(`Nano Banana Pro supports up to 14 reference images, got ${referenceImagePaths.length}`);
       }
 
-      // Process reference images
-      const referenceImages = [];
+      // Upload reference images to File API (cached per session) — fall back to base64 if upload fails
+      const referenceImages = []; // for O/R fallback: { data, mimeType }
+      const fileApiRefs = [];     // for direct path: { uri, mimeType }
+      let useDirectApi = true;
+
       if (referenceImagePaths.length > 0) {
         log(`Processing ${referenceImagePaths.length} reference images`, this.name);
 
         for (let i = 0; i < referenceImagePaths.length; i++) {
           const imagePath = referenceImagePaths[i];
-          log(`Processing reference image ${i + 1}/${referenceImagePaths.length}: ${imagePath}`, this.name);
+
+          if (!path.isAbsolute(imagePath)) {
+            throw new Error(`Reference Image Error: File path must be absolute, got: ${imagePath}`);
+          }
+          if (!fs.existsSync(imagePath)) {
+            throw new Error(`Reference Image Error: File not found: ${imagePath}`);
+          }
+          validateFileSize(imagePath, config.MAX_IMAGE_SIZE_MB);
 
           try {
-            if (!path.isAbsolute(imagePath)) {
-              throw new Error(`File path must be absolute, got relative path: ${imagePath}`);
-            }
+            const { uri, mimeType } = await fileApi.uploadFile(imagePath);
+            fileApiRefs.push({ uri, mimeType });
+            log(`✓ File API ref ${i + 1}: ${path.basename(imagePath)}`, this.name);
+          } catch (uploadErr) {
+            log(`File API upload failed for image ${i + 1}, will fall back to O/R: ${uploadErr.message}`, this.name);
+            useDirectApi = false;
+          }
+        }
 
-            if (!fs.existsSync(imagePath)) {
-              throw new Error(`Reference image file not found: ${imagePath}`);
-            }
-
-            validateFileSize(imagePath, config.MAX_IMAGE_SIZE_MB);
+        // If any upload failed, build base64 set for O/R fallback
+        if (!useDirectApi) {
+          // readFileAsBuffer and getMimeType imported at top
+          for (const imagePath of referenceImagePaths) {
             const imageBuffer = readFileAsBuffer(imagePath);
             const mimeType = getMimeType(imagePath, config.SUPPORTED_IMAGE_MIMES);
-
-            referenceImages.push({
-              data: imageBuffer.toString('base64'),
-              mimeType,
-            });
-
-            log(`✓ Loaded reference image ${i + 1}: ${imagePath} (${(imageBuffer.length / 1024).toFixed(2)}KB)`, this.name);
-          } catch (fileError) {
-            throw new Error(`Reference Image Error: Failed to process image ${i + 1} (${imagePath}): ${fileError.message}`);
+            referenceImages.push({ data: imageBuffer.toString('base64'), mimeType });
           }
         }
       }
 
-      // Validate mode requirements
-      if (['fusion', 'consistency', 'template'].includes(mode) && referenceImages.length === 0) {
+      // Validate mode requirements (check whichever ref array is populated)
+      const totalRefs = useDirectApi ? fileApiRefs.length : referenceImages.length;
+      if (['fusion', 'consistency', 'template'].includes(mode) && totalRefs === 0) {
         throw new Error(`Mode "${mode}" requires at least one reference image`);
       }
-
-      if (mode === 'fusion' && referenceImages.length < 2) {
+      if (mode === 'fusion' && totalRefs < 2) {
         throw new Error('Fusion mode requires at least 2 reference images');
       }
 
@@ -144,22 +152,40 @@ class NanoBananaProTool extends BaseTool {
         }
       }
 
-      // Check if OpenRouter is available
-      if (!openRouterService.isServiceAvailable()) {
-        throw new Error('OpenRouter service is not available. Nano Banana Pro requires OpenRouter.');
+      // Generate image — direct Gemini API first, O/R as fallback
+      let imageData;
+      let providerUsed = 'direct';
+
+      if (useDirectApi) {
+        log('Generating with direct Gemini API + File API URIs', this.name);
+        try {
+          imageData = await this._generateDirect(enhancedPrompt, fileApiRefs);
+        } catch (directErr) {
+          log(`Direct API failed (${directErr.message}), falling back to OpenRouter`, this.name);
+          useDirectApi = false;
+          providerUsed = 'openrouter';
+          // Build base64 set for fallback
+          // readFileAsBuffer and getMimeType imported at top
+          for (const imagePath of referenceImagePaths) {
+            const imageBuffer = readFileAsBuffer(imagePath);
+            const mimeType = getMimeType(imagePath, config.SUPPORTED_IMAGE_MIMES);
+            referenceImages.push({ data: imageBuffer.toString('base64'), mimeType });
+          }
+        }
       }
 
-      // Generate image using Nano Banana Pro
-      log('Generating image with Nano Banana Pro via OpenRouter', this.name);
-      const imageData = await openRouterService.generateNanaBananaProImage(
-        enhancedPrompt,
-        referenceImages,
-        {
-          mode,
-          resolution,
-          aspect_ratio: aspectRatio,
+      if (!useDirectApi) {
+        if (!openRouterService.isServiceAvailable()) {
+          throw new Error('Both direct Gemini API and OpenRouter are unavailable.');
         }
-      );
+        log('Generating with Nano Banana Pro via OpenRouter (fallback)', this.name);
+        providerUsed = 'openrouter';
+        imageData = await openRouterService.generateNanaBananaProImage(
+          enhancedPrompt,
+          referenceImages,
+          { mode, resolution, aspect_ratio: aspectRatio },
+        );
+      }
 
       if (imageData) {
         log('Successfully generated Nano Banana Pro image', this.name);
@@ -222,8 +248,7 @@ class NanoBananaProTool extends BaseTool {
             break;
         }
 
-        // Nano Banana Pro capabilities note
-        finalResponse += `\n\n---\n_Powered by Nano Banana Pro (Gemini 3 Pro Image) via OpenRouter_`;
+        finalResponse += `\n\n---\n_Powered by Nano Banana Pro (Gemini 3 Pro Image) via ${providerUsed === 'direct' ? 'Direct Gemini API' : 'OpenRouter'}_`;
 
         return {
           content: [
@@ -248,6 +273,51 @@ class NanoBananaProTool extends BaseTool {
         throw new Error(`Nano Banana Pro failed: ${error.message}`);
       }
     }
+  }
+
+  /**
+   * Generates an image via direct Gemini REST API using File API URIs.
+   * @param {string} prompt
+   * @param {{uri: string, mimeType: string}[]} fileRefs
+   * @returns {Promise<string>} base64 image data
+   */
+  async _generateDirect(prompt, fileRefs) {
+    const parts = fileRefs.map(({ uri, mimeType }) => ({ fileData: { mimeType, fileUri: uri } }));
+    parts.push({ text: prompt });
+
+    const body = JSON.stringify({
+      contents: [{ parts }],
+      generationConfig: { responseModalities: ['TEXT', 'IMAGE'] },
+    });
+
+    const result = await new Promise((resolve, reject) => {
+      const req = https.request({
+        host: 'generativelanguage.googleapis.com',
+        path: `/v1beta/models/gemini-3-pro-image-preview:generateContent?key=${config.API_KEY}`,
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(body) },
+      }, (res) => {
+        let data = '';
+        res.on('data', (chunk) => { data += chunk; });
+        res.on('end', () => {
+          try { resolve(JSON.parse(data)); }
+          catch (e) { reject(new Error(`Parse error: ${data.substring(0, 300)}`)); }
+        });
+      });
+      req.on('error', reject);
+      req.write(body);
+      req.end();
+    });
+
+    if (result.error) {
+      throw new Error(result.error.message || JSON.stringify(result.error));
+    }
+
+    const imagePart = result.candidates?.[0]?.content?.parts?.find((p) => p.inlineData);
+    if (!imagePart) {
+      throw new Error('No image in direct API response');
+    }
+    return imagePart.inlineData.data;
   }
 
   /**

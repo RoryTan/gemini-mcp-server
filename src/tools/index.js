@@ -20,6 +20,7 @@ const AudioTranscriptionTool = require('./audio-transcription');
 const CodeExecutionTool = require('./code-execution');
 const VideoAnalysisTool = require('./video-analysis');
 const ImageAnalysisTool = require('./image-analysis');
+const SearchGroundingTool = require('./search-grounding');
 // FileUploadTool removed — security risk (reads any file up to 2GB, uploads to Google)
 
 /**
@@ -84,6 +85,7 @@ registerTool(new AudioTranscriptionTool(intelligenceSystem, geminiService));
 registerTool(new CodeExecutionTool(intelligenceSystem, geminiService));
 registerTool(new VideoAnalysisTool(intelligenceSystem, geminiService));
 registerTool(new ImageAnalysisTool(intelligenceSystem, geminiService));
+registerTool(new SearchGroundingTool(intelligenceSystem, geminiService));
 // FileUploadTool removed — security risk
 
 module.exports = {
