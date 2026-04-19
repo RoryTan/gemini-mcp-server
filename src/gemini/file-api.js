@@ -12,6 +12,8 @@ const { log } = require('../utils/logger');
 const config = require('../config');
 const { readFileAsBuffer, getMimeType } = require('../utils/file-utils');
 
+// Process-global URI cache. Safe for single-user personal deployment only.
+// Multi-user deployments should scope this cache per user session.
 const _cache = new Map(); // filePath → { uri, mimeType, expiresAt }
 const TTL_MS = 47 * 60 * 60 * 1000; // 47hr (48hr Google TTL - 1hr buffer)
 
