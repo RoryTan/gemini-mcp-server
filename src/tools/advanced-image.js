@@ -14,6 +14,7 @@ const { ensureDirectoryExists, readFileAsBuffer, validateFileSize, getMimeType }
 const { validateNonEmptyString, validateString, validateArray } = require('../utils/validation');
 const config = require('../config');
 const openRouterService = require('../openrouter/openrouter-service');
+const fileApi = require('../gemini/file-api');
 
 class AdvancedImageTool extends BaseTool {
   constructor(intelligenceSystem, geminiService) {
@@ -137,51 +138,55 @@ class AdvancedImageTool extends BaseTool {
         }
       }
 
-      // Try OpenRouter first if available, then fall back to Gemini API
+      // Primary: direct Gemini API with File API URIs (no base64, no O/R margin)
       let imageData = null;
-      let providerUsed = 'Gemini API';
-      let openRouterError = null;
+      let providerUsed = 'Gemini API (direct)';
+      let directError = null;
 
-      if (openRouterService.isServiceAvailable()) {
+      try {
+        const fileUris = [];
+        for (const imagePath of referenceImagePaths) {
+          fileUris.push(await fileApi.uploadFile(imagePath));
+        }
+
+        log('Using direct Gemini API for image generation', this.name);
+        imageData = await this.geminiService.generateAdvancedImageDirect(
+          'ADVANCED_IMAGE_GENERATION',
+          enhancedPrompt,
+          fileUris,
+          { mode }
+        );
+        log('Successfully generated image using direct Gemini API', this.name);
+      } catch (err) {
+        directError = err;
+        log(`Direct Gemini API failed: ${err.message}`, this.name);
+      }
+
+      // Fallback: OpenRouter — used when env flag set or direct API failed
+      if (!imageData && (config.USE_OPENROUTER_FOR_ADVANCED_IMAGE || directError) && openRouterService.isServiceAvailable()) {
         try {
-          log('Attempting image generation with OpenRouter (free tier)', this.name);
+          log('Falling back to OpenRouter for image generation', this.name);
           imageData = await openRouterService.generateAdvancedImage(
             'ADVANCED_IMAGE_GENERATION',
             enhancedPrompt,
             referenceImages,
             { mode }
           );
-          providerUsed = 'OpenRouter (free)';
+          providerUsed = 'OpenRouter';
           log('Successfully generated image using OpenRouter', this.name);
-        } catch (error) {
-          openRouterError = error;
-          log(`OpenRouter failed: ${error.message}. Falling back to Gemini API`, this.name);
+        } catch (orError) {
+          let errorMessage = 'Advanced image generation failed on all providers.';
+          if (directError) errorMessage += ` Gemini direct: ${directError.message}.`;
+          errorMessage += ` OpenRouter: ${orError.message}`;
+          throw new Error(errorMessage);
         }
       }
 
-      // Fall back to Gemini API if OpenRouter failed or is unavailable
       if (!imageData) {
-        try {
-          log('Using Gemini API for image generation', this.name);
-          imageData = await this.geminiService.generateAdvancedImage(
-            'ADVANCED_IMAGE_GENERATION',
-            enhancedPrompt,
-            referenceImages,
-            { mode }
-          );
-          providerUsed = 'Gemini API';
-        } catch (geminiError) {
-          log(`Gemini API also failed: ${geminiError.message}`, this.name);
-          
-          // Create comprehensive error message
-          let errorMessage = 'Advanced image generation failed on all available providers.';
-          if (openRouterError) {
-            errorMessage += ` OpenRouter: ${openRouterError.message}.`;
-          }
-          errorMessage += ` Gemini API: ${geminiError.message}`;
-          
-          throw new Error(errorMessage);
-        }
+        let errorMessage = 'Advanced image generation failed.';
+        if (directError) errorMessage += ` Gemini direct: ${directError.message}.`;
+        if (!openRouterService.isServiceAvailable()) errorMessage += ' OpenRouter is also unavailable.';
+        throw new Error(errorMessage);
       }
 
       if (imageData) {
@@ -225,10 +230,10 @@ class AdvancedImageTool extends BaseTool {
         }
 
         // Add provider information
-        if (providerUsed.includes('OpenRouter')) {
-          finalResponse += `\n\n💰 **Cost**: Free (via OpenRouter free tier)`;
+        if (providerUsed === 'OpenRouter') {
+          finalResponse += `\n\n💰 **Cost**: ~$0.039 (via OpenRouter)`;
         } else {
-          finalResponse += `\n\n💰 **Cost**: ~$0.039 (via Gemini API)`;
+          finalResponse += `\n\n💰 **Cost**: ~$0.039 (via Gemini API direct)`;
         }
 
         // Add mode-specific information
