@@ -205,7 +205,7 @@ const config = {
       model: 'gemini-2.5-flash',
       generationConfig: {
         temperature: 0.2, // Low temperature for accurate analysis
-        maxOutputTokens: 2048,
+        maxOutputTokens: 65536,
       },
     },
     IMAGE_ANALYSIS: {
